@@ -1,0 +1,111 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import './SearchBook.css';
+
+const SearchBook = () => {
+    const [title, setTitle] = useState('');
+    const [books, setBooks] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [searched, setSearched] = useState(false);
+    const navigate = useNavigate();
+
+    const handleSearch = async (e) => {
+        e.preventDefault();
+        
+        if (!title.trim()) {
+            setError('Please enter a book title');
+            return;
+        }
+        
+        setLoading(true);
+        setError('');
+        setSearched(true);
+        
+        try {
+            console.log('Searching for:', title);
+            
+            // Use the full URL instead of a relative path
+            const response = await fetch(`http://localhost:5000/api/books/search?title=${encodeURIComponent(title)}`);
+            
+            console.log('Response status:', response.status);
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('Error response:', errorData);
+                throw new Error(errorData.message || 'Failed to search books');
+            }
+            
+            const data = await response.json();
+            console.log('Search results:', data);
+            
+            setBooks(data.books || []);
+        } catch (error) {
+            console.error('Error searching books:', error);
+            setError('Failed to search books. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="search-book-container">
+            <h1>Search Books</h1>
+            
+            <form onSubmit={handleSearch} className="search-form">
+                <div className="form-group">
+                    <input
+                        type="text"
+                        placeholder="Enter book title..."
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        className="search-input"
+                    />
+                </div>
+                <button type="submit" className="search-button">Search</button>
+            </form>
+            
+            <div className="back-button-container">
+                <button onClick={() => navigate('/student-dashboard')} className="back-button">
+                    Back to Dashboard
+                </button>
+            </div>
+            
+            {loading && <div className="loading">Searching books...</div>}
+            
+            {error && <div className="error">{error}</div>}
+            
+            {searched && !loading && books.length === 0 && !error && (
+                <div className="no-books">No books found with that title.</div>
+            )}
+            
+            {books.length > 0 && (
+                <div className="books-results">
+                    <h2>Search Results</h2>
+                    <table className="books-table">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Author</th>
+                                <th>ISBN</th>
+                                
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {books.map((book) => (
+                                <tr key={book.BookID}>
+                                    <td>{book.Title}</td>
+                                    <td>{book.Author}</td>
+                                    <td>{book.ISBN}</td>
+                                  
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default SearchBook;

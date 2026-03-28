@@ -1,0 +1,45 @@
+import { Link } from "react-router-dom";
+import "./AdminDashboard.css";
+
+const AdminDashboard = () => {
+    // Get user information from localStorage
+    const userName = localStorage.getItem('userName') || 'User';
+    const userId = localStorage.getItem('userId') || '';
+
+    return (
+        <div className="dashboard-container">
+            {/* User info display */}
+            <div className="user-info-display">
+                <div className="user-name">{userName}</div>
+                <div className="user-id">ID: {userId}</div>
+            </div>
+            
+            <h1 className="dashboard-title">Welcome to Librarian Dashboard</h1>
+
+            <div className="dashboard-content">
+                <div className="dashboard-links">
+                    <Link to="/search-student" className="dashboard-link">
+                        Search Student
+                    </Link>
+                    <Link to="/change-password" className="dashboard-link">
+                        Change Password
+                    </Link>
+                    <Link to="/add-book" className="dashboard-link">
+                        Add New Book
+                    </Link>
+                    <Link to="/update-book" className="dashboard-link">
+                        Update a Book
+                    </Link>
+                    <Link to="/delete-book" className="dashboard-link">
+                        Delete Book
+                    </Link>
+                    <Link to="/" className="dashboard-link logout-link">
+                        Logout
+                    </Link>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default AdminDashboard;

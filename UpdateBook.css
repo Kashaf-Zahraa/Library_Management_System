@@ -1,0 +1,125 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import "./SearchStudent.css";
+
+const SearchStudent = () => {
+    const [studentId, setStudentId] = useState("");
+    const [student, setStudent] = useState(null);
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [issuedBooks, setIssuedBooks] = useState([]);
+    const navigate = useNavigate();
+
+    const handleSearch = async (e) => {
+        e.preventDefault();
+        setError("");
+        setStudent(null);
+        setIssuedBooks([]);
+        setLoading(true);
+
+        try {
+            // First API call to get student details
+            const studentResponse = await fetch(`http://localhost:5000/api/students/${studentId}`, {
+                method: "GET",
+                headers: { "Content-Type": "application/json" }
+            });
+
+            const studentData = await studentResponse.json();
+            
+            if (studentData.success) {
+                setStudent(studentData.student);
+                
+                // Second API call to get student's issued books
+                const booksResponse = await fetch(`http://localhost:5000/api/students/${studentId}/books`, {
+                    method: "GET",
+                    headers: { "Content-Type": "application/json" }
+                });
+                
+                const booksData = await booksResponse.json();
+                
+                if (booksData.success) {
+                    setIssuedBooks(booksData.books);
+                }
+            } else {
+                setError(studentData.message || "Student not found");
+            }
+        } catch (err) {
+            console.error("Search Error:", err);
+            setError("Server error! Unable to search for student.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="search-student-container">
+            <h1>Search Student</h1>
+            
+            <form onSubmit={handleSearch} className="search-form">
+                <div className="form-group">
+                    <label>Enter Student ID:</label>
+                    <input 
+                        type="number" 
+                        value={studentId} 
+                        onChange={(e) => setStudentId(e.target.value)}
+                        required
+                        placeholder="Enter student ID number"
+                    />
+                </div>
+                
+                <button type="submit" disabled={loading}>
+                    {loading ? "Searching..." : "Search"}
+                </button>
+            </form>
+            
+            {error && <div className="error-message">{error}</div>}
+            
+            {student && (
+                <div className="student-details">
+                    <h2>Student Information</h2>
+                    <div className="info-card">
+                        <p><strong>ID:</strong> {student.StudentID}</p>
+                        <p><strong>Name:</strong> {student.Name}</p>
+                        <p><strong>Email:</strong> {student.Email}</p>
+                    </div>
+                    
+                    <h3>Issued Books</h3>
+                    {issuedBooks.length > 0 ? (
+                        <table className="books-table">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>ISBN</th>
+                                    <th>Issue Date</th>
+                                    <th>Due Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {issuedBooks.map((book, index) => (
+                                    <tr key={index}>
+                                        <td>{book.Title}</td>
+                                        <td>{book.ISBN}</td>
+                                        <td>{new Date(book.IssueDate).toLocaleDateString()}</td>
+                                        <td>{new Date(book.DueDate).toLocaleDateString()}</td>
+                                        <td className={book.ReturnDate ? "returned" : "issued"}>
+                                            {book.ReturnDate ? "Returned" : "Issued"}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    ) : (
+                        <p>No books currently issued to this student.</p>
+                    )}
+                </div>
+            )}
+            
+            <button className="back-button" onClick={() => navigate("/admin-dashboard")}>
+                Back to Dashboard
+            </button>
+        </div>
+    );
+};
+
+export default SearchStudent;

@@ -1,0 +1,88 @@
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import "./IssuedBooks.css";
+
+const IssuedBooks = () => {
+    const navigate = useNavigate();
+    const [issuedBooks, setIssuedBooks] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    
+    // Get user information from localStorage
+    const userId = localStorage.getItem('userId');
+    
+    useEffect(() => {
+        // Check if user is logged in
+        if (!userId) {
+            navigate("/");
+            return;
+        }
+        
+        // Fetch issued books for the current student
+        const fetchIssuedBooks = async () => {
+            try {
+                const response = await axios.get(`http://localhost:5000/api/students/issued-books/${userId}`);
+                setIssuedBooks(response.data);
+                setLoading(false);
+            } catch (err) {
+                setError("Failed to load issued books. Please try again later.");
+                setLoading(false);
+                console.error("Error fetching issued books:", err);
+            }
+        };
+        
+        fetchIssuedBooks();
+    }, [userId, navigate]);
+    
+    return (
+        <div className="issued-books-container">
+            <h1>Your Issued Books</h1>
+            
+            {loading ? (
+                <p className="loading-text">Loading your books...</p>
+            ) : error ? (
+                <p className="error-text">{error}</p>
+            ) : issuedBooks.length === 0 ? (
+                <div className="no-books-message">
+                    <p>You don't have any books issued at the moment.</p>
+                </div>
+            ) : (
+                <div className="books-list">
+                    <table className="books-table">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>ISBN</th>
+                                <th>Issue Date</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {issuedBooks.map((book, index) => (
+                                <tr key={index} className={book.DaysRemaining.includes('Overdue') ? 'overdue' : ''}>
+                                    <td>{book.Title}</td>
+                                    <td>{book.ISBN}</td>
+                                    <td>{new Date(book.IssueDate).toLocaleDateString()}</td>
+                                    <td>{new Date(book.DueDate).toLocaleDateString()}</td>
+                                    <td className={book.DaysRemaining.includes('Overdue') ? 'overdue-status' : 'remaining-status'}>
+                                        {book.DaysRemaining}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+            
+            <div className="navigation-buttons">
+                <button onClick={() => navigate("/student-dashboard")} className="back-button">
+                    Back to Dashboard
+                </button>
+            </div>
+        </div>
+    );
+};
+
+export default IssuedBooks;

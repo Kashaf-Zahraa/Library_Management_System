@@ -1,0 +1,99 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import "./Login.css";
+
+const Login = () => {
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [role, setRole] = useState("student");
+    const [error, setError] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const navigate = useNavigate();
+
+    const handleLogin = async (e) => {
+        e.preventDefault();
+        setError("");
+        setIsLoading(true);
+
+        let apiUrl = role === "student"
+            ? "http://localhost:5000/api/auth/student/login"
+            : "http://localhost:5000/api/auth/librarian/login";
+
+        try {
+            const response = await fetch(apiUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ Email: email, Password: password }),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Store user information in localStorage
+                localStorage.setItem('userEmail', email);
+                localStorage.setItem('userType', role);
+                localStorage.setItem('userId', data.userId);
+                localStorage.setItem('userName', data.userName);
+                
+                navigate(role === "student" ? "/student-dashboard" : "/admin-dashboard");
+            } else {
+                setError(data.message || "Invalid credentials");
+            }
+        } catch (err) {
+            console.error("Fetch Error:", err);
+            setError("Server error! Please try again later.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <div className="login-container">
+            <form onSubmit={handleLogin} className="login-box">
+                <h2>Library Login</h2>
+                
+                <div>
+                    <label htmlFor="role">Select Role:</label>
+                    <select 
+                        id="role"
+                        value={role} 
+                        onChange={(e) => setRole(e.target.value)}
+                    >
+                        <option value="student">Student</option>
+                        <option value="librarian">Librarian</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label htmlFor="email">Email:</label>
+                    <input 
+                        type="email" 
+                        id="email"
+                        value={email} 
+                        onChange={(e) => setEmail(e.target.value)} 
+                        required 
+                    />
+                </div>
+
+                <div>
+                    <label htmlFor="password">Password:</label>
+                    <input 
+                        type="password" 
+                        id="password"
+                        value={password} 
+                        onChange={(e) => setPassword(e.target.value)} 
+                        required 
+                    />
+                </div>
+
+                {error && <p className="error">{error}</p>}
+
+                <button type="submit" disabled={isLoading}>
+                    {isLoading ? "Logging in..." : "Login"}
+                </button>
+            </form>
+        </div>
+    );
+};
+
+export default Login;

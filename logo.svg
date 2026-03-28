@@ -1,0 +1,106 @@
+//viewbook.js
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import "./ViewBooks.css";
+
+const ViewBooks = () => {
+    const [books, setBooks] = useState([]);
+    const navigate = useNavigate();
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const fetchBooks = async () => {
+            setIsLoading(true);
+            try {
+                console.log("Fetching all books from API...");
+                const response = await fetch("http://localhost:5000/api/books", {
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error(`Server error: ${response.status}`, errorText);
+                    throw new Error(`Server responded with status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log("Books data received:", data);
+                
+                if (Array.isArray(data)) {
+                    setBooks(data);
+                } else {
+                    console.error("Received non-array data:", data);
+                    setError("Received invalid data format from server");
+                }
+            } catch (error) {
+                console.error("Error fetching books:", error);
+                setError(`Failed to load books: ${error.message}`);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchBooks();
+    }, []);
+
+    return (
+        <div className="view-books-container">
+            <h1>All Books</h1>
+            
+            {isLoading && <p className="loading-message">Loading books...</p>}
+            
+            {error && (
+                <div className="error-message">
+                    <p>{error}</p>
+                    <button onClick={() => window.location.reload()}>Try Again</button>
+                </div>
+            )}
+            
+            {!isLoading && !error && books.length === 0 && (
+                <p className="no-books-message">No books available in the library.</p>
+            )}
+            
+            {!isLoading && !error && books.length > 0 && (
+                <table className="books-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Title</th>
+                            <th>Author</th> {/* Added Author column */}
+                            <th>Published Year</th>
+                            <th>Quantity</th>
+                            <th>Price</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {books.map((book) => (
+                            <tr key={book.BookID}>
+                                <td>{book.BookID}</td>
+                                <td>{book.Title}</td>
+                                <td>{book.AuthorName || 'Unknown'}</td> {/* Display author name */}
+                                <td>{book.PublishedYear}</td>
+                                <td>{book.Quantity}</td>
+                                <td>₹{book.Price ? book.Price.toFixed(2) : '0.00'}</td>
+                                <td className={book.Quantity > 0 ? 'available' : 'unavailable'}>
+                                    {book.Quantity > 0 ? 'Available' : 'Out of Stock'}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            )}
+
+            <div className="button-container">
+                <button className="back-button" onClick={() => navigate("/student-dashboard")}>
+                    Back to Dashboard
+                </button>
+            </div>
+        </div>
+    );
+};
+
+export default ViewBooks;

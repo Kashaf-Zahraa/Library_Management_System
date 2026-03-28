@@ -1,0 +1,232 @@
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import "./AddBook.css";
+
+const AddBook = () => {
+    const navigate = useNavigate();
+    const [bookData, setBookData] = useState({
+        Title: "",
+        Author: "",
+        ISBN: "",
+        PublishedYear: "",
+        Quantity: "",
+        Price: ""
+    });
+    const [message, setMessage] = useState({ text: "", type: "" });
+    const [isLoading, setIsLoading] = useState(false);
+    const [validationErrors, setValidationErrors] = useState({});
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setBookData({
+            ...bookData,
+            [name]: value
+        });
+        
+        // Clear validation error when field is changed
+        if (validationErrors[name]) {
+            setValidationErrors({
+                ...validationErrors,
+                [name]: ""
+            });
+        }
+    };
+
+    const validateForm = () => {
+        const errors = {};
+        const currentYear = new Date().getFullYear();
+        
+        // Validate PublishedYear (must be between 1000 and current year)
+        if (bookData.PublishedYear) {
+            const year = parseInt(bookData.PublishedYear);
+            if (year < 1000 || year > currentYear) {
+                errors.PublishedYear = `Year must be between 1000 and ${currentYear}`;
+            }
+        }
+        
+        // Validate other fields if needed
+        if (!bookData.Title.trim()) {
+            errors.Title = "Title is required";
+        }
+
+        if (!bookData.Author.trim()) {
+            errors.Author = "Author is required";
+        }
+        
+        if (!bookData.ISBN.trim()) {
+            errors.ISBN = "ISBN is required";
+        }
+        
+        if (!bookData.Quantity || parseInt(bookData.Quantity) < 1) {
+            errors.Quantity = "Quantity must be at least 1";
+        }
+        
+        if (!bookData.Price || parseInt(bookData.Price) < 0) {
+            errors.Price = "Price must be a positive value";
+        }
+        
+        setValidationErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        
+        // Validate form before submitting
+        if (!validateForm()) {
+            setMessage({ text: "Please fix the errors before submitting", type: "error" });
+            return;
+        }
+        
+        setIsLoading(true);
+        
+        // Convert numeric fields to numbers
+        const formattedData = {
+            ...bookData,
+            PublishedYear: parseInt(bookData.PublishedYear),
+            Quantity: parseInt(bookData.Quantity),
+            Price: parseInt(bookData.Price)
+        };
+
+        try {
+            const response = await fetch("http://localhost:5000/api/books/add", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(formattedData)
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                setMessage({ text: "Book added to library successfully!", type: "success" });
+                // Reset form
+                setBookData({
+                    Title: "",
+                    Author: "",
+                    ISBN: "",
+                    PublishedYear: "",
+                    Quantity: "",
+                    Price: ""
+                });
+            } else {
+                // Display the error message from the backend
+                setMessage({ text: data.error || "Failed to add book. Please try again.", type: "error" });
+            }
+        } catch (error) {
+            setMessage({ text: "An error occurred. Please try again later.", type: "error" });
+            console.error("Error adding book:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleBack = () => {
+        navigate("/admin-dashboard"); // Go directly to admin dashboard
+    };
+
+    return (
+        <div className="add-book-container">
+            <h1 className="add-book-title">Add New Book</h1>
+            
+            {message.text && (
+                <div className={`message ${message.type}`}>
+                    {message.text}
+                </div>
+            )}
+            
+            <form className="add-book-form" onSubmit={handleSubmit}>
+                <div className="form-group">
+                    <label>Title:</label>
+                    <input
+                        type="text"
+                        name="Title"
+                        value={bookData.Title}
+                        onChange={handleChange}
+                        required
+                    />
+                    {validationErrors.Title && <div className="error-text">{validationErrors.Title}</div>}
+                </div>
+                
+                <div className="form-group">
+                    <label>Author:</label>
+                    <input
+                        type="text"
+                        name="Author"
+                        value={bookData.Author}
+                        onChange={handleChange}
+                        required
+                    />
+                    {validationErrors.Author && <div className="error-text">{validationErrors.Author}</div>}
+                </div>
+                
+                <div className="form-group">
+                    <label>ISBN:</label>
+                    <input
+                        type="text"
+                        name="ISBN"
+                        value={bookData.ISBN}
+                        onChange={handleChange}
+                        required
+                    />
+                    {validationErrors.ISBN && <div className="error-text">{validationErrors.ISBN}</div>}
+                </div>
+                
+                <div className="form-group">
+                    <label>Published Year:</label>
+                    <input
+                        type="number"
+                        name="PublishedYear"
+                        value={bookData.PublishedYear}
+                        onChange={handleChange}
+                        min="1000"
+                        max={new Date().getFullYear()}
+                        required
+                    />
+                    {validationErrors.PublishedYear && <div className="error-text">{validationErrors.PublishedYear}</div>}
+                </div>
+                
+                <div className="form-group">
+                    <label>Quantity:</label>
+                    <input
+                        type="number"
+                        name="Quantity"
+                        value={bookData.Quantity}
+                        onChange={handleChange}
+                        min="1"
+                        required
+                    />
+                    {validationErrors.Quantity && <div className="error-text">{validationErrors.Quantity}</div>}
+                </div>
+                
+                <div className="form-group">
+                    <label>Price:</label>
+                    <input
+                        type="number"
+                        name="Price"
+                        value={bookData.Price}
+                        onChange={handleChange}
+                        min="0"
+                        required
+                    />
+                    {validationErrors.Price && <div className="error-text">{validationErrors.Price}</div>}
+                </div>
+                
+                <div className="submit-button-container">
+                    <button type="submit" className="submit-button" disabled={isLoading}>
+                        {isLoading ? "Adding..." : "Add Book"}
+                    </button>
+                </div>
+                
+                <div className="back-button-container">
+                    <button type="button" className="back-to-dashboard-button" onClick={handleBack}>
+                        Back to Dashboard
+                    </button>
+                </div>
+            </form>
+        </div>
+    );
+};
+
+export default AddBook;

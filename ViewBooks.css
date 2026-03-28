@@ -1,0 +1,36 @@
+import { useNavigate } from "react-router-dom";
+import "./StudentDashboard.css";
+
+const StudentDashboard = () => {
+    const navigate = useNavigate();
+    
+    // Get user information from localStorage
+    const userName = localStorage.getItem('userName') || 'User';
+    const userId = localStorage.getItem('userId') || '';
+
+    return (
+        <div className="dashboard-container">
+            {/* User info display */}
+            <div className="user-info-display">
+                <div className="user-name">{userName}</div>
+                <div className="user-id">ID: {userId}</div>
+            </div>
+            
+            <h1>Welcome to Student Dashboard</h1>
+
+            <div className="dashboard-buttons">
+                <button onClick={() => navigate("/view-books")}>View Books</button>
+                <button onClick={() => navigate("/search-book")}>Search Book</button>
+                <button onClick={() => navigate("/authors-books")}>Authors Books</button>
+                <button onClick={() => navigate("/issue-book")}>Issue a Book</button>
+                <button onClick={() => navigate("/issued-books")}>Check Issued Books</button>
+                <button onClick={() => navigate("/return-book")}>Return Book</button>
+                <button onClick={() => navigate("/calculate-fine")}>Calculate Fine</button>
+                <button onClick={() => navigate("/change-password")}>Change Password</button>
+                <button onClick={() => navigate("/")}>Logout</button>
+            </div>
+        </div>
+    );
+};
+
+export default StudentDashboard;

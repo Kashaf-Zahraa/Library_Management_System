@@ -1,0 +1,157 @@
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import "./IssueBook.css";
+
+const IssueBook = () => {
+    const navigate = useNavigate();
+    const [bookTitle, setBookTitle] = useState("");
+    const [searchResults, setSearchResults] = useState([]);
+    const [message, setMessage] = useState("");
+    const [messageType, setMessageType] = useState(""); // "success" or "error"
+    const [isLoading, setIsLoading] = useState(false);
+
+    // Get student ID from localStorage
+    const studentId = localStorage.getItem('userId');
+    
+    // Check if user is logged in
+    useEffect(() => {
+        if (!studentId) {
+            navigate("/");
+        }
+    }, [studentId, navigate]);
+
+    // Search for books by title
+    const searchBooks = async (e) => {
+        e.preventDefault();
+        
+        if (!bookTitle.trim()) {
+            setMessage("Please enter a book title to search");
+            setMessageType("error");
+            return;
+        }
+
+        setIsLoading(true);
+        setMessage("");
+        
+        try {
+            const response = await axios.get(`http://localhost:5000/api/books/search?title=${encodeURIComponent(bookTitle)}`);
+            
+            if (response.data.success) {
+                setSearchResults(response.data.books || []);
+                
+                if ((response.data.books || []).length === 0) {
+                    setMessage("No books found with that title");
+                    setMessageType("error");
+                }
+            } else {
+                setMessage(response.data.message || "Error searching for books");
+                setMessageType("error");
+            }
+        } catch (error) {
+            console.error("Error searching books:", error);
+            setMessage(`Error: ${error.response?.data?.message || "Failed to search books"}`);
+            setMessageType("error");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Issue a book
+    const issueBook = async (bookId) => {
+        setIsLoading(true);
+        setMessage("");
+        
+        try {
+            const response = await axios.post("http://localhost:5000/api/books/issue", {
+                StudentID: parseInt(studentId),
+                BookID: bookId
+            });
+            
+            setMessage(response.data.message || "Book issued successfully!");
+            setMessageType("success");
+            
+            // Remove the issued book from search results
+            setSearchResults(prev => prev.filter(book => book.BookID !== bookId));
+            
+        } catch (error) {
+            console.error("Error issuing book:", error);
+            setMessage(`Error: ${error.response?.data?.error || "Failed to issue book"}`);
+            setMessageType("error");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <div className="issue-book-container">
+            <h1>Issue a Book</h1>
+            
+            <form className="search-section" onSubmit={searchBooks}>
+                <input
+                    type="text"
+                    placeholder="Enter book title..."
+                    value={bookTitle}
+                    onChange={(e) => setBookTitle(e.target.value)}
+                />
+                
+                <button 
+                    type="submit"
+                    disabled={isLoading}
+                >
+                    {isLoading ? "Searching..." : "Search"}
+                </button>
+            </form>
+            
+            {message && (
+                <div className={`message ${messageType}`}>
+                    {message}
+                </div>
+            )}
+            
+            {searchResults.length > 0 && (
+                <div className="search-results">
+                    <h2>Available Books</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Author</th>
+                                <th>ISBN</th>
+                                <th>Published Year</th>
+                                <th>Available</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {searchResults.map(book => (
+                                <tr key={book.BookID}>
+                                    <td>{book.Title}</td>
+                                    <td>{book.Author}</td>
+                                    <td>{book.ISBN}</td>
+                                    <td>{book.PublishedYear}</td>
+                                    <td>{book.Quantity}</td>
+                                    <td>
+                                        <button 
+                                            onClick={() => issueBook(book.BookID)}
+                                            disabled={book.Quantity <= 0 || isLoading}
+                                            className={book.Quantity <= 0 ? "disabled" : ""}
+                                        >
+                                            {book.Quantity <= 0 ? "Not Available" : "Issue"}
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+            
+            <div className="navigation-buttons">
+                <button onClick={() => navigate("/student-dashboard")}>Back to Dashboard</button>
+            </div>
+        </div>
+    );
+};
+
+export default IssueBook;5

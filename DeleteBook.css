@@ -1,0 +1,110 @@
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import "./CalculateFine.css"; // You'll need to create this CSS file
+
+const CalculateFine = () => {
+    const navigate = useNavigate();
+    const [fineDetails, setFineDetails] = useState([]);
+    const [totalFine, setTotalFine] = useState(0);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState("");
+
+    // Get student ID from localStorage
+    const studentId = localStorage.getItem('userId');
+
+    useEffect(() => {
+        // Check if user is logged in
+        if (!studentId) {
+            navigate("/");
+            return;
+        }
+
+        // Fetch fine details
+        fetchFineDetails();
+    }, [studentId, navigate]);
+
+    const fetchFineDetails = async () => {
+        try {
+            setIsLoading(true);
+            setError("");
+
+            // Get fine details
+            const response = await axios.get(`http://localhost:5000/api/students/${studentId}/fines`);
+
+            if (response.data) {
+                setFineDetails(response.data.fineDetails || []);
+                setTotalFine(response.data.totalFine || 0);
+            }
+        } catch (error) {
+            console.error("Error fetching fine details:", error);
+            setError("Failed to load fine details. Please try again later.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <div className="fine-container">
+            <h1>Fine Details</h1>
+
+            {isLoading ? (
+                <div className="loading">Loading fine details...</div>
+            ) : error ? (
+                <div className="error-message">{error}</div>
+            ) : (
+                <>
+                    <div className="fine-summary">
+                        <h2>Total Fine: Rs. {totalFine}</h2>
+                    </div>
+
+                    {fineDetails.length > 0 ? (
+                        <div className="fine-details">
+                            <h3>Fine Breakdown</h3>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Book Title</th>
+                                        <th>ISBN</th>
+                                        <th>Issue Date</th>
+                                        <th>Due Date</th>
+                                        <th>Return Date</th>
+                                        <th>Days Overdue</th>
+                                        <th>Fine Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {fineDetails.map((item, index) => (
+                                        <tr key={index}>
+                                            <td>{item.Title}</td>
+                                            <td>{item.ISBN}</td>
+                                            <td>{new Date(item.IssueDate).toLocaleDateString()}</td>
+                                            <td>{new Date(item.DueDate).toLocaleDateString()}</td>
+                                            <td>
+                                                {item.ReturnDate 
+                                                    ? new Date(item.ReturnDate).toLocaleDateString() 
+                                                    : "Not returned yet"}
+                                            </td>
+                                            <td>{item.DaysOverdue}</td>
+                                            <td>Rs. {item.FineAmount}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <div className="no-fine">
+                            <p>You don't have any overdue books or fines to pay.</p>
+                        </div>
+                    )}
+                </>
+            )}
+
+            <div className="navigation-buttons">
+                <button onClick={() => navigate("/student-dashboard")}>Back to Dashboard</button>
+            </div>
+        </div>
+    );
+};
+
+export default CalculateFine;

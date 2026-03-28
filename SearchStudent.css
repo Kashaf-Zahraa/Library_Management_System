@@ -1,0 +1,126 @@
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import "./ReturnBook.css";
+
+const ReturnBook = () => {
+    const navigate = useNavigate();
+    const [issuedBooks, setIssuedBooks] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [returnSuccess, setReturnSuccess] = useState(false);
+    const [returnMessage, setReturnMessage] = useState("");
+    
+    // Get student ID from localStorage
+    const studentId = localStorage.getItem('userId');
+    
+    // Fetch issued books on component mount
+    useEffect(() => {
+        if (!studentId) {
+            navigate('/');
+            return;
+        }
+        
+        const fetchIssuedBooks = async () => {
+            try {
+                setLoading(true);
+                const response = await axios.get(`http://localhost:5000/api/students/issued-books/${studentId}`);
+                
+                // Filter to show only currently issued books (not already returned)
+                const activeBooks = response.data.filter(book => !book.DaysRemaining.includes('Returned'));
+                setIssuedBooks(activeBooks);
+                setLoading(false);
+            } catch (err) {
+                setError(err.message || "Failed to fetch issued books");
+                setLoading(false);
+            }
+        };
+        
+        fetchIssuedBooks();
+    }, [studentId, navigate]);
+    
+    // Handle returning a book
+    const handleReturnBook = async (bookId) => {
+        try {
+            const returnData = {
+                StudentID: parseInt(studentId),
+                BookID: bookId,
+                ReturnDate: new Date()
+            };
+            
+            const response = await axios.post('http://localhost:5000/api/books/return', returnData);
+            
+            if (response.data.success) {
+                setReturnSuccess(true);
+                setReturnMessage("Book returned successfully! Check Fine Section (if any)");
+                
+                // Remove the returned book from the list
+                setIssuedBooks(issuedBooks.filter(book => book.BookID !== bookId));
+            }
+        } catch (err) {
+            setReturnSuccess(false);
+            setReturnMessage(err.response?.data?.error || "Failed to return book");
+        }
+    };
+    
+    return (
+        <div className="return-book-container">
+            <h1>Return Book</h1>
+            
+            {returnMessage && (
+                <div className={`message ${returnSuccess ? 'success' : 'error'}`}>
+                    {returnMessage}
+                </div>
+            )}
+            
+            {loading ? (
+                <p>Loading your issued books...</p>
+            ) : error ? (
+                <p className="error">Error: {error}</p>
+            ) : issuedBooks.length === 0 ? (
+                <p>You don't have any books to return.</p>
+            ) : (
+                <div className="issued-books-list">
+                    <h2>Your Issued Books</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>ISBN</th>
+                                <th>Issue Date</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {issuedBooks.map((book, index) => (
+                                <tr key={index} className={book.DaysRemaining.includes('Overdue') ? 'overdue' : ''}>
+                                    <td>{book.Title}</td>
+                                    <td>{book.ISBN}</td>
+                                    <td>{new Date(book.IssueDate).toLocaleDateString()}</td>
+                                    <td>{new Date(book.DueDate).toLocaleDateString()}</td>
+                                    <td>{book.DaysRemaining}</td>
+                                    <td>
+                                        <button 
+                                            className="return-button"
+                                            onClick={() => handleReturnBook(book.BookID)}
+                                        >
+                                            Return
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+            
+            <div className="buttons">
+                <button onClick={() => navigate('/student-dashboard')}>Back to Dashboard</button>
+            </div>
+        </div>
+    );
+};
+
+export default ReturnBook;
